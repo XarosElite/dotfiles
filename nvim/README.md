@@ -30,3 +30,4 @@ install certain languages, linters, and debuggers.
 - luacheck
 
 </details>
+The Symlink works :)
