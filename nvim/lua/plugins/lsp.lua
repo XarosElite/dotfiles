@@ -11,11 +11,12 @@ return {
 		local capabilities = require("blink.cmp").get_lsp_capabilities()
 		require("mason").setup()
 		require("mason-lspconfig").setup({
-			ensure_installed = { "lua_ls" },
+			ensure_installed = { "lua_ls", "pyright" },
 
 			-- Auto enable lsp with (vim.lsp.enable()) if the lsp was installed with mason. Version 0.11 neovim
 			automatic_enable = {
 				"lua_ls",
+				"pyright",
 			},
 		})
 
