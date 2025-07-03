@@ -21,7 +21,7 @@ return {
 		workspaces = {
 			{
 				name = "personal",
-				path = "~/'Master Archive'",
+				path = "~/Master Archive",
 			},
 			{
 				name = "work",
