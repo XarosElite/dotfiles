@@ -35,5 +35,19 @@ return {
 			start_delay = 3000,
 			debounce_hours = 5,
 		})
+		local lspconfig = require("lspconfig")
+		lspconfig.clangd.setup({
+			--     cmd = { "clangd", "--background-index", "--clang-tidy", "--log=verbose" },
+			--     init_options = {
+			--         fallbackFlags = { "-std=c++17" },
+			--     },
+		})
+		lspconfig.opts = {
+			servers = {
+				clangd = {
+					mason = false,
+				},
+			},
+		}
 	end,
 }

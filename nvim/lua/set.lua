@@ -13,6 +13,5 @@ vim.opt.updatetime = 50
 vim.opt.undofile = true
 -- IMPORTANT: This will set the "LEADER" (starter key) for your keymaps
 vim.g.mapleader = " "
-
 -- Enable Clipboard
 vim.o.clipboard = "unnamedplus"
