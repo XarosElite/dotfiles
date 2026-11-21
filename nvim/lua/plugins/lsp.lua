@@ -35,19 +35,21 @@ return {
 			start_delay = 3000,
 			debounce_hours = 5,
 		})
-		local lspconfig = require("lspconfig")
-		lspconfig.clangd.setup({
+		-- Neovim 0.11 native LSP config. nvim-lspconfig still supplies the default
+		-- server configs (cmd, filetypes, root markers); we only add overrides here.
+
+		-- Applies to every server: advertise blink.cmp completion capabilities
+		vim.lsp.config("*", {
+			capabilities = capabilities,
+		})
+
+		-- clangd uses the system binary (not installed via mason)
+		vim.lsp.config("clangd", {
 			--     cmd = { "clangd", "--background-index", "--clang-tidy", "--log=verbose" },
 			--     init_options = {
 			--         fallbackFlags = { "-std=c++17" },
 			--     },
 		})
-		lspconfig.opts = {
-			servers = {
-				clangd = {
-					mason = false,
-				},
-			},
-		}
+		vim.lsp.enable("clangd")
 	end,
 }
