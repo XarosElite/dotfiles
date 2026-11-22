@@ -1,9 +1,9 @@
+-- Live browser preview for Markdown/HTML/AsciiDoc/SVG (:LivePreview start)
 return {
 	"brianhuster/live-preview.nvim",
+	cmd = "LivePreview",
 	dependencies = {
-		-- You can choose one of the following pickers
+		-- picker used by :LivePreview pick (telescope is already installed)
 		"nvim-telescope/telescope.nvim",
-		"ibhagwan/fzf-lua",
-		"echasnovski/mini.pick",
 	},
 }

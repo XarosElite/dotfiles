@@ -1,7 +1,7 @@
 -- Sets Up Lazy - https://github.com/folke/lazy.nvim
 
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not vim.loop.fs_stat(lazypath) then
+if not vim.uv.fs_stat(lazypath) then
 	vim.fn.system({
 		"git",
 		"clone",
@@ -16,4 +16,6 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
 	spec = "plugins",
 	change_detection = { notify = false },
+	-- No plugin here needs luarocks; disabling avoids luarocks/hererocks warnings
+	rocks = { enabled = false },
 })

@@ -4,10 +4,9 @@ return {
 	cmd = { "ConformInfo" },
 	keys = {
 		{
-			-- Customize or remove this keymap to your liking
 			"<leader>F",
 			function()
-				require("conform").format({ async = true, lsp_fallback = true })
+				require("conform").format({ async = true, lsp_format = "fallback" })
 			end,
 			mode = "",
 			desc = "Format buffer",
@@ -15,15 +14,16 @@ return {
 	},
 	-- Everything in opts will be passed to setup()
 	opts = {
-		-- Define your formatters
+		-- Formatters are installed by mason-tool-installer (lua/plugins/lsp.lua)
 		formatters_by_ft = {
 			lua = { "stylua" },
 			python = { "isort", "black" },
-			java = { { "clangformat" } },
-			c = { "astyle" },
+			c = { "clang-format" },
+			cpp = { "clang-format" },
+			java = { "clang-format" },
 		},
 		-- Set up format-on-save
-		format_on_save = { timeout_ms = 500, lsp_fallback = true },
+		format_on_save = { timeout_ms = 500, lsp_format = "fallback" },
 		-- Customize formatters
 		formatters = {
 			shfmt = {
@@ -32,7 +32,6 @@ return {
 		},
 	},
 	init = function()
-		-- If you want the formatexpr, here is the place to set it
 		vim.o.formatexpr = "v:lua.require'conform'.formatexpr()"
 	end,
 }

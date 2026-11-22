@@ -1,15 +1,20 @@
--- ERROR HANDLING. press {leader}xx, leader should be space (" ") as set in the set.lua, to pull up the menu to see code errors and warnings
+-- ERROR HANDLING. Press <leader>xx (leader is space, see set.lua) to see code
+-- errors and warnings. Uses Trouble v3 command syntax: :Trouble <mode> toggle
 return {
 	"folke/trouble.nvim",
 	dependencies = { "nvim-tree/nvim-web-devicons" },
-	config = function()
-		require("trouble").setup({})
-
-		vim.keymap.set("n", "<leader>xx", ":TroubleToggle diagnostics<CR>")
-		vim.keymap.set("n", "<leader>xX", ":TroubleToggle diagnostics filter.buf=0<CR>")
-		vim.keymap.set("n", "<leader>xs", ":TroubleToggle symbols focus=false<CR>")
-		vim.keymap.set("n", "<leader>xl", ":TroubleToggle lsp focus=false win.position=right<CR>")
-		vim.keymap.set("n", "<leader>xL", ":TroubleToggle loclist<CR>")
-		vim.keymap.set("n", "<leader>xQ", ":TroubleToggle qflist<CR>")
-	end,
+	cmd = "Trouble",
+	opts = {},
+	keys = {
+		{ "<leader>xx", "<cmd>Trouble diagnostics toggle<cr>", desc = "Diagnostics (Trouble)" },
+		{ "<leader>xX", "<cmd>Trouble diagnostics toggle filter.buf=0<cr>", desc = "Buffer Diagnostics (Trouble)" },
+		{ "<leader>xs", "<cmd>Trouble symbols toggle focus=false<cr>", desc = "Symbols (Trouble)" },
+		{
+			"<leader>xl",
+			"<cmd>Trouble lsp toggle focus=false win.position=right<cr>",
+			desc = "LSP Definitions / references / ... (Trouble)",
+		},
+		{ "<leader>xL", "<cmd>Trouble loclist toggle<cr>", desc = "Location List (Trouble)" },
+		{ "<leader>xQ", "<cmd>Trouble qflist toggle<cr>", desc = "Quickfix List (Trouble)" },
+	},
 }

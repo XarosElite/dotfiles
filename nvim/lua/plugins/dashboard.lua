@@ -3,7 +3,7 @@ local preview = {
 	command = "bash",
 	file_path = vim.fn.stdpath("config") .. "/scripts/dashboard-art.sh",
 	file_width = 80, -- widest weekday banner (Wednesday) is 77 cols
-	file_height = 9, -- blank line + 6-line banner + date
+	file_height = 9, -- 6-line banner + blank + date, plus a spare row (see the script)
 }
 
 -- dashboard-nvim reserves (file_height + 4) blank lines for the preview, then

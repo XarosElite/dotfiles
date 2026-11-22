@@ -17,7 +17,7 @@ Place the `nvim` folder in the `~/.config` dir
 
 ## Mason
 
-[Mason](https://github.com/williamboman/mason.nvim) is a package manager for Neovim. Using the [Masontools](https://github.com/WhoIsSethDaniel/mason-tool-installer.nvim) we can auto
+[Mason](https://github.com/mason-org/mason.nvim) is a package manager for Neovim. Using the [Masontools](https://github.com/WhoIsSethDaniel/mason-tool-installer.nvim) we can auto
 install certain languages, linters, and debuggers.
 
 <details/>
@@ -25,9 +25,20 @@ install certain languages, linters, and debuggers.
 
 ### Packages
 
-- lua-language-server
+Language servers (mason-lspconfig):
+
+- lua_ls
+- pyright
+- clangd
+
+Formatters (mason-tool-installer, used by conform.nvim):
+
 - stylua
-- luacheck
+- black
+- isort
+- clang-format
+
+rust-analyzer is handled by rustaceanvim.
 
 </details>
 The Symlink works :)
