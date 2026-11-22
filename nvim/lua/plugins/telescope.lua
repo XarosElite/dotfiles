@@ -1,10 +1,17 @@
 return {
 	"nvim-telescope/telescope.nvim",
 	version = "*", -- latest release (0.2.x)
-	dependencies = { "nvim-lua/plenary.nvim" },
+	dependencies = {
+		"nvim-lua/plenary.nvim",
+		-- Compiled fzf sorter: faster, better fuzzy matching (needs make + gcc)
+		{ "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+	},
 
 	-- See documentation for different GO TOs that telescope can do. https://github.com/nvim-telescope/telescope.nvim?tab=readme-ov-file#getting-started
 	config = function()
+		require("telescope").setup({})
+		require("telescope").load_extension("fzf")
+
 		local builtin = require("telescope.builtin")
 		vim.keymap.set("n", "<leader>ff", builtin.find_files, {})
 		vim.keymap.set("n", "<leader>fw", builtin.grep_string, { desc = "Grep under cursor" })
