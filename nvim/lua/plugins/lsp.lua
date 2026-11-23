@@ -21,25 +21,22 @@ return {
 		-- 	init_options = { fallbackFlags = { "-std=c++17" } },
 		-- })
 
+		-- Server / tool lists live in lua/tools.lua (shared with install.sh)
+		local tools = require("tools")
+
 		require("mason").setup()
 		require("mason-lspconfig").setup({
-			ensure_installed = { "lua_ls", "pyright", "clangd" },
+			ensure_installed = tools.servers,
 
 			-- Calls vim.lsp.enable() for these once installed. Listed explicitly
 			-- (not `true`) so mason's rust_analyzer is NOT enabled here:
 			-- rustaceanvim manages rust-analyzer itself.
-			automatic_enable = { "lua_ls", "pyright", "clangd" },
+			automatic_enable = tools.servers,
 		})
 
 		require("mason-tool-installer").setup({
-			-- Formatters used by conform.nvim (lua/plugins/conform.lua).
-			-- Language servers are installed by mason-lspconfig above.
-			ensure_installed = {
-				"stylua",
-				"black",
-				"isort",
-				"clang-format",
-			},
+			-- Formatters used by conform.nvim + rust-analyzer for rustaceanvim
+			ensure_installed = tools.tools,
 
 			auto_update = false,
 			run_on_start = true,
