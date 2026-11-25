@@ -23,6 +23,9 @@
 set -euo pipefail
 
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The PATH of the shell you ran this from, before we load Nix into this one;
+# switch.sh uses it to tell whether your shell can already find nvim.
+export DOTFILES_CALLER_PATH="${DOTFILES_CALLER_PATH:-$PATH}"
 ASSUME_YES=0
 for arg in "$@"; do
 	case "$arg" in
@@ -204,16 +207,30 @@ fi
 
 # ── 3. Shell ──────────────────────────────────────────────────────────────────
 step "3/4  Shell startup"
-hm_line='[ -r "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh" ] && . "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"'
+# Marker line of the block below (older setup.sh versions added only the
+# hm-session-vars line; this block replaces that)
+rc_marker='# Nix + Home Manager environment (added by dotfiles/setup.sh)'
+rc_block="$rc_marker
+# Load Nix if the system shell config didn't (single-user installs only edit
+# ~/.profile, which terminal windows don't read)
+if ! command -v nix >/dev/null 2>&1; then
+	for f in /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh \"\$HOME/.nix-profile/etc/profile.d/nix.sh\"; do
+		if [ -r \"\$f\" ]; then . \"\$f\"; break; fi
+	done
+fi
+# Home Manager's environment variables (locales for Nix programs, ...)
+[ -r \"\$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh\" ] && . \"\$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh\"
+# (end of dotfiles block)"
 if [[ $NIXOS -eq 1 ]]; then
-	ok "NixOS loads Home Manager's environment itself"
+	ok "NixOS sets up Nix and Home Manager's environment itself"
 else
 	explain <<'EOF'
-Home Manager keeps its environment variables (locale settings for Nix
-programs on Linux, among others) in hm-session-vars.sh, which your shell has
-to load. This adds one guarded line for it to your shell rc file(s):
+New terminals need to find Nix and the programs Home Manager installs. The
+Nix installer handles that system-wide in most cases; this adds a small block
+to your shell rc file(s) that covers the rest (e.g. single-user installs) and
+loads Home Manager's environment variables (hm-session-vars.sh):
 EOF
-	printf '    %s\n' "$hm_line"
+	printf '%s\n' "$rc_block" | sed 's/^/      /'
 	rcs=()
 	case "${SHELL:-}" in
 	*/zsh) rcs+=("$HOME/.zshrc") ;;
@@ -226,12 +243,12 @@ EOF
 
 	todo=()
 	for rc in ${rcs[@]+"${rcs[@]}"}; do
-		grep -qs 'hm-session-vars' "$rc" && continue
+		grep -qsF "$rc_marker" "$rc" && continue
 		case " ${todo[*]-} " in *" $rc "*) continue ;; esac
 		todo+=("$rc")
 	done
 	if [[ ${#rcs[@]} -eq 0 ]]; then
-		note "Couldn't tell which shell rc to use (shell: ${SHELL:-unknown}). Add the line above to yours."
+		note "Couldn't tell which shell rc to use (shell: ${SHELL:-unknown}). Add the block above to yours."
 	elif [[ ${#todo[@]} -eq 0 ]]; then
 		ok "Already set up"
 	else
@@ -239,11 +256,17 @@ EOF
 		for rc in "${todo[@]}"; do names+="${names:+ and }$(pretty "$rc")"; done
 		if ask "Add it to $names?"; then
 			for rc in "${todo[@]}"; do
-				printf '\n# Home Manager environment (added by dotfiles/setup.sh)\n%s\n' "$hm_line" >>"$rc"
+				# Drop the one-line version older setup.sh runs added
+				if grep -qsF '# Home Manager environment (added by dotfiles/setup.sh)' "$rc"; then
+					cp "$rc" "$rc.dotfiles-bak"
+					awk '/^# Home Manager environment \(added by dotfiles\/setup.sh\)$/ {skip = 1; next}
+						skip && /hm-session-vars/ {skip = 0; next} {skip = 0; print}' "$rc.dotfiles-bak" >"$rc"
+				fi
+				printf '\n%s\n' "$rc_block" >>"$rc"
 				ok "Added to $(pretty "$rc")"
 			done
 		else
-			note "Skipped: add the line above to your shell rc yourself."
+			note "Skipped: add the block above to your shell rc yourself."
 		fi
 	fi
 fi

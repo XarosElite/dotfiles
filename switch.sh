@@ -20,6 +20,9 @@ set -euo pipefail
 
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export DOTFILES # read by flake.nix (paths of the config links)
+# PATH of your interactive shell (setup.sh passes the one it was started with),
+# taken before Nix is loaded into this script
+CALLER_PATH="${DOTFILES_CALLER_PATH:-$PATH}"
 
 if [[ -t 1 ]]; then
 	BLUE=$'\e[38;2;137;180;250m' GREEN=$'\e[38;2;166;227;161m'
@@ -88,7 +91,6 @@ else
 fi
 
 # The new packages, even if this shell's PATH doesn't have them yet
-ORIG_PATH="$PATH"
 export PATH="$HOME/.nix-profile/bin:/etc/profiles/per-user/$USER/bin:$PATH"
 
 step "Neovim plugins (versions from lazy-lock.json)"
@@ -105,13 +107,21 @@ if [[ -n "${TMUX:-}" ]]; then
 fi
 
 step "Done"
-case ":$ORIG_PATH:" in
-*":$HOME/.nix-profile/bin:"* | *":/etc/profiles/per-user/$USER/bin:"*) ;;
-*) note "~/.nix-profile/bin is not on this shell's PATH; a new terminal should have it (the Nix installer sets that up)." ;;
-esac
 hm_vars="$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
 if [[ $nixos_user -eq 0 && -r "$hm_vars" ]] && ! grep -qs hm-session-vars "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile" "$HOME/.zprofile"; then
-	note "Add this line to your shell rc (~/.zshrc or ~/.bashrc) so Nix programs get the right environment:"
-	printf '      . "%s"\n' "$hm_vars"
+	note "Your shell rc doesn't load Home Manager's environment yet: run ./setup.sh to add it."
 fi
-ok "Open a new terminal and start Neovim with: nvim"
+
+# Can the shell you ran this from find nvim? Not right after a first install:
+# a running shell never picks up a new PATH by itself.
+# (In a subshell: assigning PATH there also clears bash's remembered location
+# of nvim from running it above; a `PATH=... command -v` prefix would not.)
+if (PATH="$CALLER_PATH" && command -v nvim >/dev/null 2>&1); then
+	ok "Start Neovim with: nvim"
+elif [[ -t 0 && -t 1 && -n "${SHELL:-}" ]]; then
+	ok "Starting a fresh $(basename "$SHELL") so this terminal finds nvim and the other new tools"
+	printf '  %s(new terminals have them too; type exit to get back to the old shell)%s\n\n' "$YELLOW" "$RESET"
+	exec "$SHELL" -l
+else
+	note "Open a new terminal (or run: exec \$SHELL -l), then start Neovim with: nvim"
+fi
