@@ -2,7 +2,7 @@
 
 Neovim + tmux config, plus a NixOS configuration.
 
-## Install (any Linux distro)
+## Install (macOS or any Linux distro)
 
 ```
 git clone git@github.com:XarosElite/dotfiles.git ~/dotfiles
@@ -11,9 +11,11 @@ git clone git@github.com:XarosElite/dotfiles.git ~/dotfiles
 
 One command sets up everything:
 
-1. **System packages** with your distro's package manager (asks for sudo):
+1. **System packages** with your OS's package manager:
    git, curl, unzip, gcc/make, ripgrep, fd, python3 (+venv), nodejs/npm, tmux.
-   Supported: Debian/Ubuntu (incl. WSL), Arch and derivatives, Fedora/RHEL, openSUSE.
+   Supported: macOS (Homebrew — installed for you if missing; needs the Xcode
+   Command Line Tools, which it prompts for), Debian/Ubuntu (incl. WSL), Arch
+   and derivatives, Fedora/RHEL, openSUSE (these ask for sudo).
 2. **Neovim** — always the same pinned release (see `NVIM_VERSION` in
    `install.sh`), downloaded from GitHub, checksum-verified, installed to
    `~/.local`. Distro Neovim versions vary too much to rely on.
@@ -27,6 +29,12 @@ Re-run it any time — it skips what's already done, so it also repairs a broken
 setup. Use `--no-packages` to skip the sudo/package step.
 
 Make sure `~/.local/bin` is on your `PATH` (the installer warns if it isn't).
+
+On macOS, add `~/.local/bin` to `~/.zshrc`. In iTerm2, keep
+*Settings → Profiles → Text → "Treat ambiguous-width characters as double
+width"* **off** and line spacing at 100%, or the block-letter banner and tmux
+bar won't line up. (Terminal.app has no 24-bit colour; use iTerm2, Ghostty,
+kitty or WezTerm.)
 
 Optional: a [Nerd Font](https://www.nerdfonts.com/) in your terminal for the
 icons inside Neovim. The tmux theme works with any font.
