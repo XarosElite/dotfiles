@@ -113,8 +113,14 @@ step "Treesitter parsers (and anything not provided by Nix)"
 nvim --headless -c "luafile $DOTFILES/nvim/scripts/bootstrap.lua" ||
 	note "Some tools failed to install (see above). Retry with :Mason / :TSUpdate inside Neovim."
 
-if [[ -n "${TMUX:-}" ]]; then
-	tmux source-file "$HOME/.config/tmux/tmux.conf" && ok "Reloaded tmux config"
+# A running tmux server only reads its config when it starts, and new `tmux`
+# sessions join that server, so they'd keep the old look. Reload it in place.
+if tmux has-session 2>/dev/null; then
+	if tmux source-file "$HOME/.config/tmux/tmux.conf"; then
+		ok "Reloaded the config in the running tmux server"
+	else
+		note "Couldn't reload tmux's config (see above). Run: tmux kill-server, then start tmux again"
+	fi
 fi
 
 step "Done"

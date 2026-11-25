@@ -148,91 +148,184 @@ in
     pkgs.runCommand "ls-colors-catppuccin-mocha" { }
       "${pkgs.vivid}/bin/vivid generate catppuccin-mocha > $out";
 
-  # ── Prompt (both shells): starship, styled like the tmux bar ────────────────
-  #   ░▒▓ ~/projects/dotfiles ▓▒░ ░▒▓ ◇ main ▓▒░ !? took 3s
-  #   ❯
-  # Shade blocks and geometric shapes only, like tmux: no Nerd Font needed.
+  # ── Prompt (both shells): starship ──────────────────────────────────────────
+  # Layout after a powerlevel10k single-line prompt, drawn in the tmux bar's
+  # style (shade-block fades, Catppuccin; no Nerd Font needed):
+  #
+  #   ░▒▓ ubuntu ▓▒░ ~/pr/dotfiles ▓▒░ ░▒▓ ◇ main +1 ▓▒░ █        ✘ ERROR 3s ░▒▓ me@host ▓▒░ ░▒▓ 03:52:03 AM ▓▒░
+  #   └ left: OS, directory, git            cursor ┘   right: exit status, duration, tools, user@host (SSH), time
+  #
+  # After you run a command, its prompt collapses to just ❯ ("transient
+  # prompt", set up per shell below), so scrollback stays clean.
   programs.starship = {
     enable = true;
     settings = {
       palette = "catppuccin_mocha";
       palettes.catppuccin_mocha = lib.mapAttrs (_: v: v) c;
-      add_newline = true;
+      add_newline = false;
+
       format = lib.concatStrings [
-        "$username$hostname"
-        "$directory"
-        "$git_branch$git_state$git_status"
-        "$nix_shell$python$cmd_duration$jobs"
-        "$line_break$character"
+        # OS fading into the directory, like tmux's blue → sapphire fade
+        "[░▒▓](fg:sapphire)$os[▓▒░](fg:sapphire bg:blue)$directory[▓▒░ ](fg:blue)"
+        # Git block, only inside a repo
+        "([░▒▓](fg:surface0)$git_branch$git_state$git_status[ ▓▒░](fg:surface0) )"
+      ];
+      right_format = lib.concatStrings [
+        "$status$cmd_duration$jobs"
+        "$direnv$nix_shell$python$nodejs$rust$golang"
+        # user@host block, only over SSH or as root
+        "([░▒▓](fg:surface0)$username$hostname[▓▒░ ](fg:surface0))"
+        "[░▒▓](fg:sapphire)$time[▓▒░](fg:sapphire)"
       ];
 
-      # Only shown over SSH
-      username = {
-        format = "[$user]($style)";
-        style_user = "fg:sapphire";
-        style_root = "fg:red bold";
-      };
-      hostname = {
-        format = "[@$hostname]($style) ";
-        style = "fg:sapphire";
+      os = {
+        disabled = false;
+        format = "[ $symbol ]($style)";
+        style = "bg:sapphire fg:crust bold";
+        # Plain names instead of the default emoji/Nerd Font icons
+        symbols = {
+          Alpine = "alpine";
+          Arch = "arch";
+          Debian = "debian";
+          EndeavourOS = "endeavour";
+          Fedora = "fedora";
+          Linux = "linux";
+          Macos = "macos";
+          Manjaro = "manjaro";
+          Mint = "mint";
+          NixOS = "nixos";
+          openSUSE = "suse";
+          Pop = "pop";
+          Raspbian = "raspbian";
+          RedHatEnterprise = "rhel";
+          Ubuntu = "ubuntu";
+          Unknown = "unix";
+          Windows = "windows";
+        };
       };
 
+      # ~/pr/dotfiles: parent directories shortened, like p10k
       directory = {
-        format = "[░▒▓](fg:blue)[ $path$read_only ]($style)[▓▒░](fg:blue)";
+        format = "[ $path$read_only ]($style)";
         style = "bg:blue fg:crust bold";
         read_only = " ◆";
         read_only_style = "bg:blue fg:crust";
-        truncation_length = 4;
-        truncation_symbol = "…/";
+        truncation_length = 1;
+        fish_style_pwd_dir_length = 2;
+        truncate_to_repo = false;
       };
 
-      # ◇ like tmux's normal-mode marker
+      # ◇ like tmux's normal-mode marker; counts like p10k (+1 staged, !2 modified)
       git_branch = {
-        format = " [░▒▓](fg:surface0)[ ◇ $branch ]($style)[▓▒░](fg:surface0)";
+        format = "[ ◇ $branch]($style)";
         style = "bg:surface0 fg:text";
       };
-      git_state.format = " [$state( $progress_current/$progress_total)]($style)";
-      git_state.style = "fg:peach bold";
+      git_state = {
+        format = "[ $state( $progress_current/$progress_total)]($style)";
+        style = "bg:surface0 fg:peach bold";
+      };
       git_status = {
-        format = "( [$all_status$ahead_behind]($style))";
-        style = "fg:yellow";
-        ahead = "↑$count";
-        behind = "↓$count";
-        diverged = "↑$ahead_count↓$behind_count";
-        modified = "!";
-        staged = "+";
-        untracked = "?";
-        deleted = "✗";
-        renamed = "»";
+        format = "[( $all_status$ahead_behind)]($style)";
+        style = "bg:surface0 fg:yellow";
+        ahead = "⇡$count";
+        behind = "⇣$count";
+        diverged = "⇡$ahead_count⇣$behind_count";
+        staged = "+$count";
+        modified = "!$count";
+        untracked = "?$count";
+        deleted = "✗$count";
+        renamed = "»$count";
         stashed = "≡";
-        conflicted = "=";
+        conflicted = "=$count";
       };
 
-      nix_shell = {
-        format = " [◈ $name]($style)";
-        style = "fg:sapphire";
-        heuristic = true;
-      };
-      python = {
-        format = "( [$virtualenv]($style))";
-        style = "fg:yellow";
-        detect_extensions = [ ];
-        detect_files = [ ];
+      # ✔ / ✘ 1 (p10k's status segment)
+      status = {
+        disabled = false;
+        # ✘ ERROR / ✘ NOTFOUND / ✘ INT (Ctrl+C) / ✘ 3 (codes without a name)
+        format = "[$symbol( $common_meaning)( $signal_name)( $maybe_int)]($style) ";
+        symbol = "✘";
+        success_symbol = "✔";
+        not_executable_symbol = "✘";
+        not_found_symbol = "✘";
+        sigint_symbol = "✘";
+        signal_symbol = "✘";
+        style = "fg:red bold";
+        success_style = "fg:green";
+        map_symbol = false;
+        pipestatus = true;
+        pipestatus_format = "[$pipestatus]($style) ";
+        pipestatus_separator = "[|](fg:overlay0)";
+        pipestatus_segment_format = "[$symbol]($style)";
       };
       cmd_duration = {
-        format = " [took $duration]($style)";
-        style = "fg:overlay0";
-        min_time = 2000;
+        format = "[$duration]($style) ";
+        style = "fg:peach";
+        min_time = 3000; # p10k threshold: 3s
       };
       jobs = {
-        format = " [$symbol$number]($style)";
+        format = "[$symbol$number]($style) ";
         symbol = "&";
         style = "fg:lavender";
       };
+
+      # Environments / tool versions (only where relevant), plain-text labels
+      direnv = {
+        disabled = false;
+        format = "[$loaded]($style) ";
+        loaded_msg = "direnv";
+        unloaded_msg = "";
+        allowed_msg = "";
+        not_allowed_msg = "direnv ✘";
+        denied_msg = "direnv ✘";
+        style = "fg:teal";
+      };
+      nix_shell = {
+        format = "[◈ $name]($style) ";
+        style = "fg:sapphire";
+        # (not `heuristic`: it counts any /nix/store path on PATH as a nix
+        # shell, which with Home Manager is always true)
+      };
+      python = {
+        format = "[py $version( \\($virtualenv\\))]($style) ";
+        style = "fg:yellow";
+      };
+      nodejs = {
+        format = "[node $version]($style) ";
+        style = "fg:green";
+      };
+      rust = {
+        format = "[rs $version]($style) ";
+        style = "fg:peach";
+      };
+      golang = {
+        format = "[go $version]($style) ";
+        style = "fg:sapphire";
+      };
+
+      username = {
+        format = "[ $user]($style)";
+        style_user = "bg:surface0 fg:sapphire";
+        style_root = "bg:surface0 fg:red bold";
+      };
+      hostname = {
+        format = "[@$hostname ]($style)";
+        style = "bg:surface0 fg:sapphire";
+      };
+
+      # 12-hour clock like p10k, in tmux's time-segment colors
+      time = {
+        disabled = false;
+        format = "[ $time ]($style)";
+        time_format = "%I:%M:%S %p";
+        style = "bg:sapphire fg:crust bold";
+      };
+
+      # Only used for the collapsed (transient) prompt of finished commands
       character = {
+        format = "$symbol ";
         success_symbol = "[❯](bold blue)";
         error_symbol = "[❯](bold red)";
-        vimcmd_symbol = "[❮](bold green)";
       };
     };
   };
@@ -438,6 +531,24 @@ in
         autoload -U edit-command-line && zle -N edit-command-line
         bindkey '^X^E' edit-command-line    # Ctrl+X Ctrl+E: edit the line in nvim
       ''
+      (lib.mkOrder 1600 ''
+        # Transient prompt (like powerlevel10k): when you press Enter, the
+        # prompt of that line collapses to ❯, so scrollback stays clean
+        # Right prompt flush with the edge, as in bash (zsh keeps 1 column free)
+        ZLE_RPROMPT_INDENT=0
+        if [[ $TERM != dumb ]]; then
+          typeset -g _dots_prompt=$PROMPT _dots_rprompt=$RPROMPT
+          _dots_transient_prompt() {
+            PROMPT='%B%(?.%F{${c.blue}}.%F{${c.red}})❯%f%b '
+            RPROMPT=
+            zle .reset-prompt
+          }
+          _dots_full_prompt() { PROMPT=$_dots_prompt RPROMPT=$_dots_rprompt; }
+          autoload -Uz add-zle-hook-widget add-zsh-hook
+          add-zle-hook-widget zle-line-finish _dots_transient_prompt
+          add-zsh-hook precmd _dots_full_prompt
+        fi
+      '')
       (lib.mkOrder 2500 (localInit "zsh"))
     ];
   };
@@ -487,6 +598,10 @@ in
           bleopt complete_auto_delay=50
           bleopt history_share=1 # shared between open shells (zsh: share_history)
           bleopt prompt_eol_mark=
+          # Transient prompt (like powerlevel10k): when you press Enter, the
+          # prompt of that line collapses to ❯ (red after a failed command)
+          bleopt prompt_ps1_final='$(${config.programs.starship.package}/bin/starship module character --status="$?")'
+          bleopt prompt_rps1_final= prompt_rps1_transient=1 # and drop its right side
 
           # Same colors as zsh-syntax-highlighting (see `syntax` in shell/default.nix)
           ble-face -s syntax_default         fg=${c.text}
