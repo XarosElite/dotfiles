@@ -46,26 +46,33 @@ text=$(
 color=89b4fa
 layout=(--canvas-width 0 --anchor-text n --no-eol)
 
-# install.sh links tte into ~/.local/bin, which may not be on Neovim's PATH
-tte=$(command -v tte || echo "$HOME/.local/bin/tte")
-if [[ ! -x "$tte" ]]; then
-	# No tte: draw the banner statically, centered, in the header color
+# The banner without animation, centered, in the header color
+static_banner() {
+	local pad line
 	pad=$((($(tput cols 2>/dev/null || echo 80) - art_width) / 2))
 	((pad < 0)) && pad=0
-	printf '\e[38;2;137;180;250m'
+	printf '\e[H\e[2J\e[38;2;137;180;250m' # clear first (a failed tte may have drawn)
 	while IFS= read -r line; do printf '%*s%s\n' "$pad" '' "$line"; done <<<"$text"
 	printf '\e[0m'
+}
+
+# install.sh links tte into ~/.local/bin, which may not be on Neovim's PATH
+tte=$(command -v tte || echo "$HOME/.local/bin/tte")
+# Static banner if tte is missing or rejects the options below (they need
+# tte >= 0.13; home.nix and install.sh pin 0.15.0). Its errors are hidden:
+# any extra output would scroll the tiny preview window.
+if [[ ! -x "$tte" ]] ||
+	! "$tte" "${layout[@]}" slice \
+		--slice-direction diagonal --movement-speed 0.8 \
+		--final-gradient-stops "$color" <<<"$text" 2>/dev/null; then
+	static_banner
 	exec sleep 2147483647
 fi
-
-"$tte" "${layout[@]}" slice \
-	--slice-direction diagonal --movement-speed 0.8 \
-	--final-gradient-stops "$color" <<<"$text"
 
 "$tte" "${layout[@]}" --reuse-canvas --frame-rate 200 highlight \
 	--highlight-direction diagonal_top_left_to_bottom_right \
 	--highlight-width 12 --highlight-brightness 2 \
-	--final-gradient-stops "$color" <<<"$text"
+	--final-gradient-stops "$color" <<<"$text" 2>/dev/null
 
 # Keep the terminal job alive so Neovim doesn't print "[Process exited 0]".
 # The job is killed when the dashboard closes. (BSD sleep has no "infinity".)

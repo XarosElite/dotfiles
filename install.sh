@@ -26,6 +26,7 @@
 set -euo pipefail
 
 NVIM_VERSION="v0.11.7"
+TTE_VERSION="0.15.0"
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="$HOME/.local/bin"
 OPT="$HOME/.local/opt"
@@ -269,7 +270,9 @@ install_tte() {
 			return
 		}
 	fi
-	"$venv/bin/pip" install --quiet --upgrade terminaltexteffects ||
+	# Pinned: the banner script uses options that older/newer releases may not
+	# have (keep in sync with home.nix)
+	"$venv/bin/pip" install --quiet "terminaltexteffects==$TTE_VERSION" ||
 		{ warn "pip install terminaltexteffects failed; the dashboard banner won't animate."; return; }
 	ln -sfn "$venv/bin/tte" "$BIN/tte"
 	ok "tte $("$BIN/tte" --version 2>/dev/null | awk '{print $NF}')"

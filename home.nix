@@ -13,6 +13,19 @@ let
   # Live links into the checkout (not copies in /nix/store), so editing the
   # configs, :Lazy updating lazy-lock.json etc. work without a rebuild.
   link = path: config.lib.file.mkOutOfStoreSymlink "${dotfiles}/${path}";
+
+  # tte (TerminalTextEffects) for the animated dashboard banner. nixpkgs 25.11
+  # has 0.12.1, which lacks --no-eol and --reuse-canvas that
+  # nvim/scripts/dashboard-art.sh uses, so build 0.15.0 (same as install.sh).
+  tte = pkgs.terminaltexteffects.overridePythonAttrs (old: rec {
+    version = "0.15.0";
+    src = pkgs.fetchPypi {
+      pname = "terminaltexteffects";
+      inherit version;
+      hash = "sha256-9LMchr+pQ9W/Oyxey/rqDeZe1KlRAoxA+OTLVO/QZDk=";
+    };
+    build-system = [ pkgs.python3Packages.hatchling ]; # was poetry-core
+  });
 in
 {
   home.packages =
@@ -20,7 +33,7 @@ in
     [
       neovim-unwrapped # 0.11.7 from nixos-25.11 (see flake.nix)
       tmux
-      terminaltexteffects # `tte`, the animated dashboard banner
+      tte # animated dashboard banner (see above)
 
       # Neovim plugin installs and builds (lazy.nvim, telescope-fzf-native,
       # treesitter parsers)
