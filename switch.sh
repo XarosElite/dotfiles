@@ -84,10 +84,21 @@ else
 	step "Home Manager"
 	system="$(nix eval --impure --raw --expr builtins.currentSystem)"
 	ok "Platform: $system"
-	nix run "$DOTFILES#home-manager" -- switch --impure -b "backup-$(date +%Y%m%d-%H%M%S)" \
+	backup_ext="backup-$(date +%Y%m%d-%H%M%S)"
+	nix run "$DOTFILES#home-manager" -- switch --impure -b "$backup_ext" \
 		--flake "$DOTFILES#$system" "$@" ||
 		die "home-manager switch failed (see above). Re-run with --show-trace for details."
-	ok "Packages installed, ~/.config/nvim and ~/.config/tmux linked"
+	ok "Packages installed, shell + nvim + tmux config linked"
+	# Report what Home Manager moved out of the way (e.g. your old ~/.bashrc)
+	moved=()
+	while IFS= read -r f; do moved+=("$f"); done < <(
+		find "$HOME" "$HOME/.config" -maxdepth 2 -name "*.$backup_ext" 2>/dev/null | sort -u
+	)
+	if [[ ${#moved[@]} -gt 0 ]]; then
+		note "Moved aside (Home Manager manages these now):"
+		for f in "${moved[@]}"; do printf '      ~%s\n' "${f#"$HOME"}"; done
+		note "Keep anything you need from them in ~/.shellrc.local, ~/.bashrc.local or ~/.zshrc.local"
+	fi
 fi
 
 # The new packages, even if this shell's PATH doesn't have them yet
@@ -107,11 +118,6 @@ if [[ -n "${TMUX:-}" ]]; then
 fi
 
 step "Done"
-hm_vars="$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
-if [[ $nixos_user -eq 0 && -r "$hm_vars" ]] && ! grep -qs hm-session-vars "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile" "$HOME/.zprofile"; then
-	note "Your shell rc doesn't load Home Manager's environment yet: run ./setup.sh to add it."
-fi
-
 # Can the shell you ran this from find nvim? Not right after a first install:
 # a running shell never picks up a new PATH by itself.
 # (In a subshell: assigning PATH there also clears bash's remembered location

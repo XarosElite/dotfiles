@@ -8,6 +8,7 @@ without Nix.
 |---|---|
 | `flake.nix` | Pins nixpkgs + Home Manager; Home Manager config per platform, NixOS config |
 | `home.nix` | Packages (Neovim, tmux, LSP servers, formatters, ...) and config links |
+| `shell/` | bash + zsh: aliases, prompt, zoxide, fzf, ... (`default.nix`), shared functions (`functions.sh`) |
 | `setup.sh` | **New machine**: installs Nix, turns on flakes, then runs `switch.sh` |
 | `switch.sh` | Applies `home.nix` with Home Manager — re-run after changes |
 | `install.sh` | **Backup installer** for machines without Nix (Homebrew / apt / pacman / dnf / zypper) |
@@ -30,8 +31,9 @@ accept everything); re-running it skips what's done:
    "experimental feature". Turns it on for good by adding
    `experimental-features = nix-command flakes` to `~/.config/nix/nix.conf`
    (on NixOS, `nixos/configuration.nix` sets it).
-3. **Shell** — adds one line to `~/.zshrc` / `~/.bashrc` that loads Home
-   Manager's environment (`hm-session-vars.sh`).
+3. **Shell** — explains that Home Manager takes over `~/.bashrc`, `~/.zshrc`
+   etc. (see [Shell](#shell-bash--zsh)); your current ones are moved to
+   `*.backup-<date>` and listed.
 4. **`switch.sh`** — Home Manager doesn't need installing; this runs the
    version pinned in `flake.lock`:
    - installs everything in `home.nix` at the versions pinned in
@@ -56,6 +58,36 @@ home-manager switch --rollback   # go back to the previous one
 ```
 
 > Flakes only see files that git tracks: `git add` new files before switching.
+
+## Shell (bash + zsh)
+
+Both shells are configured in `shell/default.nix` to look and work the same,
+themed Catppuccin Mocha like tmux and Neovim. Shared parts are written once:
+
+- **Aliases** (`home.shellAliases`) and **environment** (`home.sessionVariables`)
+- **Prompt**: starship, styled like the tmux bar (`░▒▓ dir ▓▒░ ░▒▓ ◇ branch ▓▒░`, no Nerd Font needed)
+- **Tools**, each with bash + zsh integration:
+  - `cd` is [zoxide](https://github.com/ajeetdsouza/zoxide): `cd proj` jumps
+    to the best match among directories you've used; `cdi` picks with fzf
+  - fzf: `Ctrl+R` history, `Ctrl+T` files, `Alt+C` directories (with previews)
+  - eza (`ls`, `ll`, `la`, `lt`), bat (`cat`), delta (git diffs), direnv +
+    nix-direnv, tldr, btop
+- **Functions** (`shell/functions.sh`, read live, no switch needed): `mkcd`,
+  `up N`, `fe` (fuzzy-open in nvim), `rgv` (ripgrep → nvim at the line), `extract`
+
+Each shell adds the same features its own way: zsh with autosuggestions,
+syntax highlighting and history substring search; bash with
+[ble.sh](https://github.com/akinomyoga/ble.sh), which brings those to bash.
+Both: Up/Down search history for what you've typed, history shared between
+open shells, `Ctrl+X Ctrl+E` edits the line in nvim, type a directory name to
+`cd` into it.
+
+Changing aliases or anything else in `default.nix` needs `./switch.sh` (or the
+`dots-switch` alias), then `reload`. Machine-only additions, not in git:
+`~/.shellrc.local` (both), `~/.bashrc.local`, `~/.zshrc.local`.
+
+To make zsh your login shell: add `$(which zsh)` to `/etc/shells`, then
+`chsh -s $(which zsh)`.
 
 ## NixOS
 

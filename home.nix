@@ -28,6 +28,9 @@ let
   });
 in
 {
+  # bash + zsh: aliases, prompt, zoxide, fzf, ... (shell/default.nix)
+  imports = [ ./shell ];
+
   home.packages =
     with pkgs;
     [

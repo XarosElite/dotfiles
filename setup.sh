@@ -8,8 +8,9 @@
 #                  it isn't installed. NixOS already has it.
 #   2. Flakes      explains and turns on the "experimental features" that
 #                  flakes need, permanently, so plain `nix` commands work.
-#   3. Shell       adds one line to your shell rc so Home Manager's
-#                  environment loads in new terminals.
+#   3. Shell       explains that Home Manager takes over your shell config
+#                  (bash + zsh, see shell/default.nix) and where your current
+#                  ~/.bashrc / ~/.zshrc go.
 #   4. switch.sh   Home Manager (packages + config links), Neovim plugins,
 #                  treesitter parsers. On NixOS: rebuilds the system.
 #
@@ -206,69 +207,34 @@ EOF
 fi
 
 # ── 3. Shell ──────────────────────────────────────────────────────────────────
-step "3/4  Shell startup"
-# Marker line of the block below (older setup.sh versions added only the
-# hm-session-vars line; this block replaces that)
-rc_marker='# Nix + Home Manager environment (added by dotfiles/setup.sh)'
-rc_block="$rc_marker
-# Load Nix if the system shell config didn't (single-user installs only edit
-# ~/.profile, which terminal windows don't read)
-if ! command -v nix >/dev/null 2>&1; then
-	for f in /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh \"\$HOME/.nix-profile/etc/profile.d/nix.sh\"; do
-		if [ -r \"\$f\" ]; then . \"\$f\"; break; fi
-	done
-fi
-# Home Manager's environment variables (locales for Nix programs, ...)
-[ -r \"\$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh\" ] && . \"\$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh\"
-# (end of dotfiles block)"
-if [[ $NIXOS -eq 1 ]]; then
-	ok "NixOS sets up Nix and Home Manager's environment itself"
-else
-	explain <<'EOF'
-New terminals need to find Nix and the programs Home Manager installs. The
-Nix installer handles that system-wide in most cases; this adds a small block
-to your shell rc file(s) that covers the rest (e.g. single-user installs) and
-loads Home Manager's environment variables (hm-session-vars.sh):
-EOF
-	printf '%s\n' "$rc_block" | sed 's/^/      /'
-	rcs=()
-	case "${SHELL:-}" in
-	*/zsh) rcs+=("$HOME/.zshrc") ;;
-	*/bash) rcs+=("$HOME/.bashrc") ;;
-	esac
-	[[ "$OS" == "Darwin" && ${#rcs[@]} -eq 0 ]] && rcs+=("$HOME/.zshrc") # macOS default shell
-	for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
-		[[ -f "$rc" ]] && rcs+=("$rc")
-	done
+step "3/4  Shell config"
+explain <<'EOF'
+Home Manager manages your bash and zsh setup (shell/default.nix): it writes
+~/.bashrc, ~/.zshrc, ~/.profile, ~/.bash_profile and ~/.zshenv. Aliases,
+prompt and tools are defined once in the repo and shared by both shells.
 
-	todo=()
-	for rc in ${rcs[@]+"${rcs[@]}"}; do
-		grep -qsF "$rc_marker" "$rc" && continue
-		case " ${todo[*]-} " in *" $rc "*) continue ;; esac
-		todo+=("$rc")
-	done
-	if [[ ${#rcs[@]} -eq 0 ]]; then
-		note "Couldn't tell which shell rc to use (shell: ${SHELL:-unknown}). Add the block above to yours."
-	elif [[ ${#todo[@]} -eq 0 ]]; then
-		ok "Already set up"
-	else
-		names=""
-		for rc in "${todo[@]}"; do names+="${names:+ and }$(pretty "$rc")"; done
-		if ask "Add it to $names?"; then
-			for rc in "${todo[@]}"; do
-				# Drop the one-line version older setup.sh runs added
-				if grep -qsF '# Home Manager environment (added by dotfiles/setup.sh)' "$rc"; then
-					cp "$rc" "$rc.dotfiles-bak"
-					awk '/^# Home Manager environment \(added by dotfiles\/setup.sh\)$/ {skip = 1; next}
-						skip && /hm-session-vars/ {skip = 0; next} {skip = 0; print}' "$rc.dotfiles-bak" >"$rc"
-				fi
-				printf '\n%s\n' "$rc_block" >>"$rc"
-				ok "Added to $(pretty "$rc")"
-			done
-		else
-			note "Skipped: add the block above to your shell rc yourself."
-		fi
+Your current versions of those files aren't deleted: the switch in step 4
+moves each one aside to <file>.backup-<date> and lists them. Anything from
+them you want to keep on this machine only (not in git) goes in:
+  ~/.shellrc.local   read by both shells
+  ~/.bashrc.local    bash only
+  ~/.zshrc.local     zsh only
+EOF
+existing=()
+for rc in .bashrc .zshrc .profile .bash_profile .zshenv; do
+	# Files that aren't already Home Manager's links into /nix/store
+	if [[ -e "$HOME/$rc" && "$(readlink "$HOME/$rc" 2>/dev/null)" != /nix/store/* ]]; then
+		existing+=("~/$rc")
 	fi
+done
+if [[ ${#existing[@]} -gt 0 ]]; then
+	note "Will be moved aside: ${existing[*]}"
+	ask "Continue?" || die "Stopped before changing anything in your shell config."
+else
+	ok "Nothing to move aside"
+fi
+if [[ "${SHELL:-}" != */zsh && "${SHELL:-}" != */bash ]]; then
+	note "Your login shell is ${SHELL:-unknown}; this config is for bash and zsh."
 fi
 
 # ── 4. Home Manager ───────────────────────────────────────────────────────────
