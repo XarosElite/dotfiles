@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# One-command setup for these dotfiles (Neovim + tmux).
+# BACKUP installer for these dotfiles (Neovim + tmux), for machines without
+# Nix: installs the dependencies with Homebrew / the distro's package manager.
+# The main way to install is ./setup.sh (Nix + Home Manager, see flake.nix /
+# home.nix); both set up the same thing.
 #
 #   git clone <this repo> ~/dotfiles && ~/dotfiles/install.sh
 #
@@ -33,7 +36,7 @@ for arg in "$@"; do
 	case "$arg" in
 	--no-packages) SKIP_PACKAGES=1 ;;
 	-h | --help)
-		sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
+		sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'
 		exit 0
 		;;
 	*)
@@ -318,7 +321,14 @@ reload_tmux() {
 }
 
 # ── Run ─────────────────────────────────────────────────────────────────────
-printf '%s▓▒░ dotfiles installer%s  (%s)\n' "$BLUE" "$RESET" "$DOTFILES"
+printf '%s▓▒░ dotfiles installer (backup, no Nix)%s  (%s)\n' "$BLUE" "$RESET" "$DOTFILES"
+if has nix || [[ -d /nix/store ]]; then
+	warn "Nix is installed here: ./setup.sh (Home Manager) is the preferred setup. Continuing with install.sh."
+fi
+# (Home Manager links ~/.config/nvim to the store, which links to this repo)
+if [[ -L "$CONFIG/nvim" && "$(readlink "$CONFIG/nvim")" == /nix/store/* ]]; then
+	die "~/.config/nvim is managed by Home Manager on this machine. Use ./switch.sh, or remove it from home.nix first."
+fi
 
 if [[ $SKIP_PACKAGES -eq 1 ]]; then
 	step "System packages"

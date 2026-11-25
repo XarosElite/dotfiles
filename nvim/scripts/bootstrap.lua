@@ -1,7 +1,7 @@
--- Run by install.sh after plugins are installed:
+-- Run by install.sh / switch.sh after plugins are installed:
 --   nvim --headless -c "luafile <this file>"
--- Installs every mason package and treesitter parser from lua/tools.lua and
--- waits for them, so the first real launch doesn't install things in the
+-- Installs the mason packages (those not already on PATH, e.g. from Nix) and
+-- treesitter parsers from lua/tools.lua and waits for them, so the first real launch doesn't install things in the
 -- background. Exits with status 1 if anything failed.
 
 local tools = require("tools")
@@ -29,9 +29,19 @@ end, 200)
 local map = require("mason-lspconfig").get_mappings().lspconfig_to_package
 local names = {}
 for _, server in ipairs(tools.servers) do
-	table.insert(names, map[server] or server)
+	if tools.external(server) then
+		log("  ✓ " .. server .. " (provided outside mason)")
+	else
+		table.insert(names, map[server] or server)
+	end
 end
-vim.list_extend(names, tools.tools)
+for _, tool in ipairs(tools.tools) do
+	if tools.external(tool) then
+		log("  ✓ " .. tool .. " (provided outside mason)")
+	else
+		table.insert(names, tool)
+	end
+end
 
 local pending = {}
 for _, name in ipairs(names) do

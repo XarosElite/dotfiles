@@ -1,46 +1,93 @@
 # Dotfiles Home
 
-Neovim + tmux config, plus a NixOS configuration.
+Neovim + tmux config, set up with Nix + Home Manager on macOS, any Linux
+distro and NixOS. A plain shell installer is kept as a backup for machines
+without Nix.
 
-## Install (macOS or any Linux distro)
+| File | What it is |
+|---|---|
+| `flake.nix` | Pins nixpkgs + Home Manager; Home Manager config per platform, NixOS config |
+| `home.nix` | Packages (Neovim, tmux, LSP servers, formatters, ...) and config links |
+| `setup.sh` | **New machine**: installs Nix, turns on flakes, then runs `switch.sh` |
+| `switch.sh` | Applies `home.nix` with Home Manager — re-run after changes |
+| `install.sh` | **Backup installer** for machines without Nix (Homebrew / apt / pacman / dnf / zypper) |
+| `nixos/configuration.nix` | NixOS system config |
+
+## Install (macOS, any Linux distro, NixOS)
 
 ```
 git clone git@github.com:XarosElite/dotfiles.git ~/dotfiles
+~/dotfiles/setup.sh
+```
+
+That's the only command. It explains and asks before each step (`--yes` to
+accept everything); re-running it skips what's done:
+
+1. **Nix** — installs the latest release with the official installer
+   (nixos.org) if it's missing. Needs sudo; creates `/nix` and a `nix-daemon`
+   service (single-user install where there's no systemd, e.g. WSL).
+2. **Flakes** — this repo is a flake, which Nix still labels an
+   "experimental feature". Turns it on for good by adding
+   `experimental-features = nix-command flakes` to `~/.config/nix/nix.conf`
+   (on NixOS, `nixos/configuration.nix` sets it).
+3. **Shell** — adds one line to `~/.zshrc` / `~/.bashrc` that loads Home
+   Manager's environment (`hm-session-vars.sh`).
+4. **`switch.sh`** — Home Manager doesn't need installing; this runs the
+   version pinned in `flake.lock`:
+   - installs everything in `home.nix` at the versions pinned in
+     `flake.lock`, the same on every machine: Neovim 0.11.7, tmux, git,
+     ripgrep, fd, a C compiler, tte (animated dashboard banner), the LSP
+     servers and formatters from `nvim/lua/tools.lua`, node and python;
+   - **links** `~/.config/nvim` → `nvim/` and `~/.config/tmux` → `tmux/` (live
+     links, so edits apply without re-running anything; anything already
+     there is moved to `*.backup-<date>`);
+   - installs **Neovim plugins** at the versions in `nvim/lazy-lock.json`,
+     and the treesitter parsers.
+
+Open a new terminal afterwards. From then on, after changing or pulling the
+config, just run `~/dotfiles/switch.sh`.
+
+Useful commands:
+
+```
+nix flake update                 # update nixpkgs + Home Manager (then ./switch.sh)
+home-manager generations         # list previous setups
+home-manager switch --rollback   # go back to the previous one
+```
+
+> Flakes only see files that git tracks: `git add` new files before switching.
+
+## NixOS
+
+`setup.sh` / `switch.sh` work on NixOS too. For the user set up in
+`flake.nix` (`edger`), `switch.sh` rebuilds the whole system from the flake
+(`nixos-rebuild switch --flake ~/dotfiles#nixos --impure`), which applies
+`home.nix` along with it; other users get standalone Home Manager.
+
+`--impure` is needed because `nixos/configuration.nix` imports
+`/etc/nixos/hardware-configuration.nix`. Note the system is built from the
+flake's pinned nixpkgs (25.11), not from your nix channel.
+
+## Backup: without Nix
+
+On machines where you can't (or don't want to) install Nix:
+
+```
 ~/dotfiles/install.sh
 ```
 
-One command sets up everything:
+It installs the same tools with Homebrew (macOS; installed for you if missing,
+needs the Xcode Command Line Tools) or your distro's package manager
+(Debian/Ubuntu incl. WSL, Arch, Fedora/RHEL, openSUSE; asks for sudo), a pinned
+Neovim release from GitHub, and LSP servers/formatters via mason inside Neovim.
+Use `--no-packages` to skip the package step. Make sure `~/.local/bin` is on
+your `PATH` (it warns if it isn't).
 
-1. **System packages** with your OS's package manager:
-   git, curl, unzip, gcc/make, ripgrep, fd, python3 (+venv), nodejs/npm, tmux.
-   Supported: macOS (Homebrew — installed for you if missing; needs the Xcode
-   Command Line Tools, which it prompts for), Debian/Ubuntu (incl. WSL), Arch
-   and derivatives, Fedora/RHEL, openSUSE (these ask for sudo).
-2. **Neovim** — always the same pinned release (see `NVIM_VERSION` in
-   `install.sh`), downloaded from GitHub, checksum-verified, installed to
-   `~/.local`. Distro Neovim versions vary too much to rely on.
-3. **tte** for the animated dashboard header (Python venv in `~/.local/opt`).
-4. **Links** `~/.config/nvim` → `nvim/` and `~/.config/tmux` → `tmux/`.
-   Anything already there is moved to `*.bak-<date>`, never deleted.
-5. **Neovim plugins** at the exact versions in `nvim/lazy-lock.json`, then LSP
-   servers, formatters and treesitter parsers (listed in `nvim/lua/tools.lua`).
+## Terminal notes
 
-Re-run it any time — it skips what's already done, so it also repairs a broken
-setup. Use `--no-packages` to skip the sudo/package step.
-
-Make sure `~/.local/bin` is on your `PATH` (the installer warns if it isn't).
-
-On macOS, add `~/.local/bin` to `~/.zshrc`. In iTerm2, keep
-*Settings → Profiles → Text → "Treat ambiguous-width characters as double
-width"* **off** and line spacing at 100%, or the block-letter banner and tmux
-bar won't line up. (Terminal.app has no 24-bit colour; use iTerm2, Ghostty,
-kitty or WezTerm.)
-
-Optional: a [Nerd Font](https://www.nerdfonts.com/) in your terminal for the
-icons inside Neovim. The tmux theme works with any font.
-
-## NixOS Setup
-```
-git clone git@github.com:XarosElite/dotfiles.git
-sudo nixos-rebuild switch -I nixos-config=/home/$USER/dotfiles/nixos/configuration.nix
-```
+- In iTerm2, keep *Settings → Profiles → Text → "Treat ambiguous-width
+  characters as double width"* **off** and line spacing at 100%, or the
+  block-letter banner and tmux bar won't line up.
+- Terminal.app has no 24-bit colour; use iTerm2, Ghostty, kitty or WezTerm.
+- Optional: a [Nerd Font](https://www.nerdfonts.com/) for the icons inside
+  Neovim. The tmux theme works with any font.
