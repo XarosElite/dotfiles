@@ -168,7 +168,7 @@ in
         # OS fading into the directory, like tmux's blue → sapphire fade
         "[░▒▓](fg:sapphire)$os[▓▒░](fg:sapphire bg:blue)$directory[▓▒░ ](fg:blue)"
         # Git block, only inside a repo
-        "([░▒▓](fg:surface0)$git_branch$git_state$git_status[ ▓▒░](fg:surface0) )"
+        "([░▒▓](fg:surface0)$git_branch$git_state$git_status[ ](bg:surface0)[▓▒░](fg:surface0) )"
       ];
       right_format = lib.concatStrings [
         "$status$cmd_duration$jobs"
